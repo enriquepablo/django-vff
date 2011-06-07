@@ -31,9 +31,11 @@ import urlparse
 import git
 
 from django.conf import settings
+from django.db.models.signals import post_save
 from django.core.files.move import file_move_safe
 from django.core.files.storage import FileSystemStorage
 from django.utils.encoding import filepath_to_uri
+from django.utils.encoding import force_unicode
 
 def get_repo_name():
     try:
@@ -49,6 +51,19 @@ def get_repo_location():
                                 filepath_to_uri(reponame))
     return os.path.abspath(location), base_url
 
+def get_cimsg_field():
+    try:
+        msgfield = settings.VFF_COMMIT_MSG_FIELD
+    except AttributeError:
+        msgfield = 'vff_commit_msg'
+    return msgfield
+
+def create_fname(instance, fieldname):
+    return '%s-%s.xml' % (instance.pk, fieldname)
+
+def create_mname(instance, fieldname):
+    return '%s/%s' % (get_repo_name(), create_fname(instance, fieldname))
+
 
 class GitStorage(FileSystemStorage):
     """
@@ -56,33 +71,51 @@ class GitStorage(FileSystemStorage):
     """
 
     def __init__(self):
-        self.location, self.base_url = get_repo_location()
+        self.repo_location, self.base_url = get_repo_location()
         try:
-            self.repo = git.Repo(self.location)
+            self.repo = git.Repo(self.repo_location)
         except git.exc.NoSuchPathError:
-            self.repo = git.Repo.init(self.location)
+            self.repo = git.Repo.init(self.repo_location)
+        self.location = os.path.abspath(settings.MEDIA_ROOT)
 
-    def _save(self, name, content):
-        #def savefile(sender, instance, created, user):
-        #    fname = str(
-        full_path = self.path(name)
-        # This file has a file path that we can move.
-        if hasattr(content, 'temporary_file_path'):
-            file_move_safe(content.temporary_file_path(), full_path)
-            content.close()
+    def save(self, uid, content, fieldname, save):
+        def savefile(sender, instance=None, **kwargs):
+            # check that the instance is the right one
+            saved_uid = getattr(instance, fieldname).name
+            if saved_uid != uid:
+                return
+            # create the actual filename
+            name = create_mname(instance, fieldname)
+            content.name = name
+            full_path = self.path(name)
+            # This file has a file path that we can move.
+            if hasattr(content, 'temporary_file_path'):
+                file_move_safe(content.temporary_file_path(), full_path)
+                content.close()
 
-        # This is a normal uploadedfile that we can stream.
-        else:
-            with open(full_path, 'w') as f:
-                for chunk in content.chunks():
-                    f.write(chunk)
-        if settings.FILE_UPLOAD_PERMISSIONS is not None:
-            os.chmod(full_path, settings.FILE_UPLOAD_PERMISSIONS)
+            # This is a normal uploadedfile that we can stream.
+            else:
+                with open(full_path, 'w') as f:
+                    content.seek(0)
+                    f.write(content.read())
+            if settings.FILE_UPLOAD_PERMISSIONS is not None:
+                os.chmod(full_path, settings.FILE_UPLOAD_PERMISSIONS)
+            # commit
+            msgfield = get_cimsg_field()
+            commit_msg = getattr(instance, msgfield, 'no commit msg')
+            fname = create_fname(instance, fieldname)
+            self.repo.index.add([fname])
+            self.repo.index.commit(commit_msg)
 
-        self.repo.index.add([name])
-        self.repo.index.commit("my commit message")
+            setattr(instance, fieldname, name)
+            if save or kwargs['created']:
+                instance.save()
 
-        return '%s/%s' % (get_repo_name(), name)
+            # remove signal
+            post_save.disconnect(dispatch_uid=uid)
+
+        post_save.connect(savefile, weak=False, dispatch_uid=uid)
+        return force_unicode(uid.replace('\\', '/'))
 
     def delete(self, name):
         self.repo.remove([name])

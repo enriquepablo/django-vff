@@ -25,13 +25,33 @@
 # The views and conclusions contained in the software and documentation are those
 # of the authors and should not be interpreted as representing official policies,
 # either expressed or implied, of Terena.
+import uuid
 
-from django.db.models.fields.files import FileField
+from django.db.models.fields.files import FieldFile, FileField
 
-from versionedfilefield.gitstorage import GitStorage
+from vff.gitstorage import GitStorage, create_mname
+
+class VersionedFieldFile(FieldFile):
+
+    def save(self, name, content, save=True):
+        #name = self.field.generate_filename(self.instance, name)
+        if self.instance.pk is None:    # new file
+            self.name = uuid.uuid4().hex
+        else:
+            self.name = create_mname(self.instance, self.field.name)
+            save = False
+        self.storage.save(self.name, content, self.field.name, save)
+        setattr(self.instance, self.field.name, self.name)
+
+        # Update the filesize cache
+        self._size = content.size
+        self._committed = True
+    save.alters_data = True
 
 
 class VersionedFileField(FileField):
+
+    attr_class = VersionedFieldFile
 
     def __init__(self, verbose_name=None, name=None,
                  storage=None, **kwargs):
@@ -41,10 +61,3 @@ class VersionedFileField(FileField):
                                                  upload_to='unused',
                                                  storage=vstorage,
                                                  **kwargs)
-
-    def generate_filename(self, instance, filename):
-        if instance.pk is None:    # new file
-            raise ValueError(u"You can only save versioned files"
-                             u"on existing (not new) objects")
-        name = '%s-%s.xml' % (instance.pk, self.name)
-        return name
