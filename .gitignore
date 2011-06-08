@@ -1,0 +1,16 @@
+.installed.cfg
+.mr.developer.cfg
+bin/
+buildout.cfg
+develop-eggs/
+downloads/
+eggs/
+include/
+lib/
+parts/
+src/
+var/
+*.pyc
+*.pyo
+*.swp
+*.egg-info
