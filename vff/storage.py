@@ -28,16 +28,17 @@
 
 import os
 import urlparse
-import git
 
 from django.conf import settings
 from django.db.models.signals import post_save
-from django.core.files.move import file_move_safe
 from django.core.files.storage import FileSystemStorage
 from django.utils.encoding import filepath_to_uri
 from django.utils.encoding import force_unicode
 
 def get_repo_name():
+    """
+    get the name of the versioned files repository
+    """
     try:
         reponame = settings.VFF_REPO_NAME
     except AttributeError:
@@ -45,6 +46,10 @@ def get_repo_name():
     return reponame
 
 def get_repo_location():
+    """
+    get the absolute path and the base_url for the
+    versioned files repository
+    """
     reponame = get_repo_name()
     location = os.path.join(settings.MEDIA_ROOT, reponame)
     base_url = urlparse.urljoin(settings.MEDIA_URL,
@@ -52,6 +57,9 @@ def get_repo_location():
     return os.path.abspath(location), base_url
 
 def get_cimsg_field():
+    """
+    get the field name for the commit message
+    """
     try:
         msgfield = settings.VFF_COMMIT_MSG_FIELD
     except AttributeError:
@@ -59,23 +67,29 @@ def get_cimsg_field():
     return msgfield
 
 def create_fname(instance, fieldname):
-    return '%s-%s.xml' % (instance.pk, fieldname)
+    """
+    return the path to the file relative to the
+    repository of versioned files
+    """
+    class_name = instance.__class__.__name__.lower()
+    return '%s%s-%s.xml' % (class_name, instance.pk, fieldname)
 
 def create_mname(instance, fieldname):
-    return '%s/%s' % (get_repo_name(), create_fname(instance, fieldname))
-
-
-class GitStorage(FileSystemStorage):
     """
-    Git managed filesystem storage
+    return the path to the file relative to the
+    django media directory
+    """
+    return os.path.join(get_repo_name(), create_fname(instance, fieldname))
+
+
+class VersionedStorage(FileSystemStorage):
+    """
+    Versioned filesystem storage
     """
 
-    def __init__(self):
+    def __init__(self, backend_class):
         self.repo_location, self.base_url = get_repo_location()
-        try:
-            self.repo = git.Repo(self.repo_location)
-        except git.exc.NoSuchPathError:
-            self.repo = git.Repo.init(self.repo_location)
+        self.backend = backend_class(self.repo_location)
         self.location = os.path.abspath(settings.MEDIA_ROOT)
 
     def save(self, uid, content, fieldname, save):
@@ -84,31 +98,18 @@ class GitStorage(FileSystemStorage):
             saved_uid = getattr(instance, fieldname).name
             if saved_uid != uid:
                 return
-            # create the actual filename
+            # create the actual filename from the versioned file
             name = create_mname(instance, fieldname)
             content.name = name
             full_path = self.path(name)
-            # This file has a file path that we can move.
-            if hasattr(content, 'temporary_file_path'):
-                file_move_safe(content.temporary_file_path(), full_path)
-                content.close()
-
-            # This is a normal uploadedfile that we can stream.
-            else:
-                with open(full_path, 'w') as f:
-                    content.seek(0)
-                    f.write(content.read())
-            if settings.FILE_UPLOAD_PERMISSIONS is not None:
-                os.chmod(full_path, settings.FILE_UPLOAD_PERMISSIONS)
-            # commit
+            # new revision
             msgfield = get_cimsg_field()
             commit_msg = getattr(instance, msgfield, 'no commit msg')
             fname = create_fname(instance, fieldname)
-            self.repo.index.add([fname])
-            self.repo.index.commit(commit_msg)
+            self.backend.add_revision(content, fname, commit_msg)
 
-            setattr(instance, fieldname, name)
             if save or kwargs['created']:
+                setattr(instance, fieldname, name)
                 instance.save()
 
             # remove signal
@@ -117,6 +118,5 @@ class GitStorage(FileSystemStorage):
         post_save.connect(savefile, weak=False, dispatch_uid=uid)
         return force_unicode(uid.replace('\\', '/'))
 
-    def delete(self, name):
-        self.repo.remove([name])
-        self.repo.index.commit("my commit message")
+    def delete(self, fname):
+        self.backend.del_document(fname, "my commit message")

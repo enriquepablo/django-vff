@@ -27,9 +27,11 @@
 # either expressed or implied, of Terena.
 import uuid
 
+from django.conf import settings
 from django.db.models.fields.files import FieldFile, FileField
 
-from vff.gitstorage import GitStorage, create_mname
+from vff.storage import VersionedStorage, create_mname
+from vff.abcs import VFFBackend
 
 HAS_SOUTH = True
 try:
@@ -62,7 +64,19 @@ class VersionedFileField(FileField):
 
     def __init__(self, verbose_name=None, name=None,
                  storage=None, **kwargs):
-        vstorage = storage or GitStorage()
+        try:
+            mname, cname = settings.VERSIONEDFILE_BACKEND
+        except AttributeError:
+            raise NameError('When using VersionedField, you have to define'
+                            ' VERSIONEDFILE_BACKEND in settings.py. Refer'
+                            ' to the docs for more info.')
+        module = __import__(mname, globals(), locals(), ['*'])
+        backend_class = getattr(module, cname)
+        if not issubclass(backend_class, VFFBackend):
+            raise ValueError('The class pointed at in VERSIONEDFILE_BACKEND'
+                             ' has to provide the interface defined by'
+                             ' vff.abcs.VFFBackend.')
+        vstorage = VersionedStorage(backend_class)
         super(VersionedFileField, self).__init__(verbose_name=verbose_name,
                                                  name=name,
                                                  upload_to='unused',
