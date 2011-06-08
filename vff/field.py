@@ -65,11 +65,13 @@ class VersionedFileField(FileField):
     def __init__(self, verbose_name=None, name=None,
                  storage=None, **kwargs):
         try:
-            mname, cname = settings.VERSIONEDFILE_BACKEND
+            path = settings.VERSIONEDFILE_BACKEND
         except AttributeError:
             raise NameError('When using VersionedField, you have to define'
                             ' VERSIONEDFILE_BACKEND in settings.py. Refer'
                             ' to the docs for more info.')
+        mname = path.split('.')[:-1].join('.')
+        cname = path.split('.')[-1]
         module = __import__(mname, globals(), locals(), ['*'])
         backend_class = getattr(module, cname)
         if not issubclass(backend_class, VFFBackend):
