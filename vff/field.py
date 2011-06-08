@@ -31,6 +31,13 @@ from django.db.models.fields.files import FieldFile, FileField
 
 from vff.gitstorage import GitStorage, create_mname
 
+HAS_SOUTH = True
+try:
+    from south.modelsinspector import add_introspection_rules
+except ImportError:
+    HAS_SOUTH = False
+
+
 class VersionedFieldFile(FieldFile):
 
     def save(self, name, content, save=True):
@@ -61,3 +68,12 @@ class VersionedFileField(FileField):
                                                  upload_to='unused',
                                                  storage=vstorage,
                                                  **kwargs)
+
+if HAS_SOUTH:
+    add_introspection_rules([
+        (
+            [VersionedFileField],
+            [],
+            {},
+        ),
+    ], ["^vff\.field\.VersionedFileField"])
