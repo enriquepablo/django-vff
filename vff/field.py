@@ -70,7 +70,7 @@ class VersionedFileField(FileField):
             raise NameError('When using VersionedField, you have to define'
                             ' VERSIONEDFILE_BACKEND in settings.py. Refer'
                             ' to the docs for more info.')
-        mname = path.split('.')[:-1].join('.')
+        mname = '.'.join(path.split('.')[:-1])
         cname = path.split('.')[-1]
         module = __import__(mname, globals(), locals(), ['*'])
         backend_class = getattr(module, cname)
