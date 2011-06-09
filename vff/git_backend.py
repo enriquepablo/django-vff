@@ -36,6 +36,10 @@ from vff.abcs import VFFBackend
 
 
 class GitBackend(object):
+    """
+    Git backend for versioned file field's storage.
+    See abcs.py for documentation.
+    """
 
     def __init__(self, location):
         self.location = location
@@ -63,5 +67,19 @@ class GitBackend(object):
     def del_document(self, fname, commit_msg):
         self.repo.remove([fname])
         self.repo.index.commit("my commit message")
+
+    def list_revisions(self, fname, count=0, offset=0):
+        revs = []
+        for ci in self.repo.iter_commits(paths=fname,
+                                         max_count=count,
+                                         skip=offset):
+            revs.append((ci.hexsha, ci.committed_date, ci.message))
+        return revs
+    
+    def get_diff(self, fname, id1, id2):
+        ci1 = self.repo.commit(id1)
+        ci2 = self.repo.commit(id2)
+        diff = ci1.diff(other=ci2, paths=fname, create_patch=True)[0]
+        return diff.diff
 
 VFFBackend.register(GitBackend)

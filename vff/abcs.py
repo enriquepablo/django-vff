@@ -38,20 +38,57 @@ class VFFBackend(object):
         """
         Initialize the backend.
 
-        @params:
+        params:
         - location: a string with the absolute path to where the repository
-          of versioned files has to be located.
+                   of versioned files has to be located.
         """
 
     @abstractmethod
-    def add_revision(self, fname, commit_msg):
+    def add_revision(self, content, fname, commit_msg):
         """
         Add a new revision to an existing document, or add a new document
         to the repository.
+
+        params:
+        - content: A file like object that implements open, seek, read, close
+                  and contains the document data to be versioned
+        - fname: A string with the path to the versioned file, relative to the root of the
+                repository
+        - commit_msg: A string with the commit msg
         """
 
     @abstractmethod
     def del_document(self, fname, commit_msg):
         """
+        Remove document from the repository.
+
+        params:
+        - fname: A string with the path to the versioned file, relative to the root of the
+                repository
+        - commit_msg: A string with the commit msg
+        """
+
+    @abstractmethod
+    def list_revisions(self, fname, count=0, offset=0):
+        """
+        return a list of all (or from offset to offset+count) revisions of a document. A revision is here
+        represented by a (id, commit_date, commit_msg) tuple.
+
+        params:
+        - fname: A string with the path to the versioned file, relative to the root of the
+                repository
+        - count: The number of revisions to list
+        - offset: The number of revisions skipped from the list
+        """
+
+    @abstractmethod
+    def get_diff(self, fname, id1, id2):
+        """
+        return a diff between two revisions.
+
+        params:
+        - fname: A string with the path to the versioned file, relative to the root of the
+                repository
+        - id1, id2: the ids of the revisions to diff.
         """
 
