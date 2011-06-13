@@ -74,7 +74,7 @@ class GitBackend(object):
 
     def del_document(self, fname, commit_msg):
         self.repo.remove([fname])
-        self.repo.index.commit("my commit message")
+        self.repo.index.commit(commit_msg)
 
     def list_revisions(self, fname, count=0, offset=0):
         revs = []
