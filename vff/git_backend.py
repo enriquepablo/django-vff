@@ -64,6 +64,14 @@ class GitBackend(object):
         self.repo.index.add([fname])
         self.repo.index.commit(commit_msg)
 
+    def get_revision(self, fname, rev=None):
+        full_path = os.path.join(self.location, fname)
+        if rev:
+            pass  # XXX check out revision
+        with open(full_path) as f:
+            return f.read()
+        # XXX undo check out
+
     def del_document(self, fname, commit_msg):
         self.repo.remove([fname])
         self.repo.index.commit("my commit message")

@@ -118,5 +118,8 @@ class VersionedStorage(FileSystemStorage):
         post_save.connect(savefile, weak=False, dispatch_uid=uid)
         return force_unicode(uid.replace('\\', '/'))
 
+    def get_revision(self, fname, rev=None):
+        return self.backend.get_revision(fname, rev=rev)
+
     def delete(self, fname):
         self.backend.del_document(fname, "my commit message")
