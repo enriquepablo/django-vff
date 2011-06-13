@@ -28,6 +28,7 @@
 import uuid
 
 from django.conf import settings
+from django.utils.importlib import import_module
 from django.db.models.fields.files import FieldFile, FileField
 
 from vff.storage import VersionedStorage, create_mname
@@ -72,7 +73,7 @@ class VersionedFileField(FileField):
                             ' to the docs for more info.')
         mname = '.'.join(path.split('.')[:-1])
         cname = path.split('.')[-1]
-        module = __import__(mname, globals(), locals(), ['*'])
+        module = import_module(mname)
         backend_class = getattr(module, cname)
         if not issubclass(backend_class, VFFBackend):
             raise ValueError('The class pointed at in VERSIONEDFILE_BACKEND'
