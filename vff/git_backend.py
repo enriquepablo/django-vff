@@ -66,11 +66,14 @@ class GitBackend(object):
 
     def get_revision(self, fname, rev=None):
         full_path = os.path.join(self.location, fname)
+        text = u''
         if rev:
             pass  # XXX check out revision
-        with open(full_path) as f:
-            return f.read()
+        if os.exists(full_path):
+            with open(full_path) as f:
+                text = f.read()
         # XXX undo check out
+        return text
 
     def del_document(self, fname, commit_msg):
         self.repo.remove([fname])
