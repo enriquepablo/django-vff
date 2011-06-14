@@ -95,7 +95,11 @@ class VersionedStorage(FileSystemStorage):
     def save(self, uid, content, fieldname, save):
         def savefile(sender, instance=None, **kwargs):
             # check that the instance is the right one
-            saved_uid = getattr(instance, fieldname).name
+            try:
+                saved_uid = getattr(instance, fieldname).name
+            except AttributeError:
+                # an instance of another class
+                return
             if saved_uid != uid:
                 return
             # create the actual filename from the versioned file
