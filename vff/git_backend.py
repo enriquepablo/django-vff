@@ -69,7 +69,7 @@ class GitBackend(object):
         text = u''
         if rev:
             pass  # XXX check out revision
-        if os.exists(full_path):
+        if os.path.exists(full_path):
             with open(full_path) as f:
                 text = f.read()
         # XXX undo check out
