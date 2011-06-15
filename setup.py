@@ -40,7 +40,6 @@ setup(name='django-vff',
       description=("Django versioned file field"),
       long_description=(read('README.rst') + '\n\n' + read('CHANGES.rst')),
       classifiers=[
-        'Development Status :: early stages',
         'Framework :: Django',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
