@@ -56,20 +56,6 @@ def get_repo_location():
                                 filepath_to_uri(reponame))
     return os.path.abspath(location), base_url
 
-def get_vff_fields():
-    """
-    get the field name for the commit message
-    """
-    try:
-        msgfield = settings.VFF_COMMIT_MSG_FIELD
-    except AttributeError:
-        msgfield = 'vff_commit_msg'
-    try:
-        userfield = settings.VFF_USERNAME_FIELD
-    except AttributeError:
-        userfield = 'vff_username'
-    return msgfield, userfield
-
 def create_fname(instance, fieldname):
     """
     return the path to the file relative to the
@@ -96,7 +82,7 @@ class VersionedStorage(FileSystemStorage):
         self.backend = backend_class(self.repo_location)
         self.location = os.path.abspath(settings.MEDIA_ROOT)
 
-    def save(self, uid, content, fieldname, save):
+    def save(self, uid, content, fieldname, username, commit_msg, save):
         def savefile(sender, instance=None, **kwargs):
             # check that the instance is the right one
             try:
@@ -111,9 +97,6 @@ class VersionedStorage(FileSystemStorage):
             content.name = name
             full_path = self.path(name)
             # new revision
-            msgfield, userfield = get_vff_fields()
-            commit_msg = getattr(instance, msgfield, 'no commit msg')
-            username = getattr(instance, userfield, 'anonymous')
             fname = create_fname(instance, fieldname)
             self.backend.add_revision(content, fname, commit_msg, username)
 

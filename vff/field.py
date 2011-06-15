@@ -43,14 +43,15 @@ except ImportError:
 
 class VersionedFieldFile(FieldFile):
 
-    def save(self, name, content, save=True):
+    def save(self, name, content, username, commit_msg, save=True):
         #name = self.field.generate_filename(self.instance, name)
         if self.instance.pk is None:    # new file
             self.name = uuid.uuid4().hex
         else:
             self.name = create_mname(self.instance, self.field.name)
             save = False
-        self.storage.save(self.name, content, self.field.name, save)
+        self.storage.save(self.name, content, self.field.name,
+                          username, commit_msg, save)
         setattr(self.instance, self.field.name, self.name)
 
         # Update the filesize cache
