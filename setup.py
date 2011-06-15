@@ -18,6 +18,7 @@ Django file field that saves a new version of a file each time it is modified. R
       zip_safe=False,
       install_requires=[
           # -*- Extra requirements: -*-
+          'lockfile',
           'GitPython',
       ],
       entry_points="""

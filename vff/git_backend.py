@@ -27,12 +27,18 @@
 # either expressed or implied, of Terena.
 
 import os
+import re
 import git
 
 from django.conf import settings
 from django.core.files.move import file_move_safe
 
+from lockfile import LockFile
+
 from vff.abcs import VFFBackend
+
+LOCK = LockFile('/tmp/vff-git-commit.lock')
+USERPAT = re.compile(r'(\w+) <(\w+)>')
 
 
 class GitBackend(object):
@@ -48,7 +54,22 @@ class GitBackend(object):
         except git.exc.NoSuchPathError:
             self.repo = git.Repo.init(self.location)
 
-    def add_revision(self, content, fname, commit_msg):
+    def _commit(self, fname, msg, username):
+        with LOCK:
+            m = USERPAT.match(username)
+            if m:
+                for env in ('USER', 'GIT_AUTHOR_NAME', 'GIT_COMMITTER_NAME'):
+                    os.environ[env] = m.group(1)
+                for env in ('GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_EMAIL'):
+                    os.environ[env] = m.group(2)
+            else:
+                for env in ('USER', 'GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL',
+                             'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL'):
+                    os.environ[env] = username
+            self.repo.index.add([fname])
+            self.repo.index.commit(msg)
+
+    def add_revision(self, content, fname, commit_msg, username):
         full_path = os.path.join(self.location, fname)
         if hasattr(content, 'temporary_file_path'):
             # This file has a file path that we can move.
@@ -61,14 +82,13 @@ class GitBackend(object):
                 f.write(content.read())
         if settings.FILE_UPLOAD_PERMISSIONS is not None:
             os.chmod(full_path, settings.FILE_UPLOAD_PERMISSIONS)
-        self.repo.index.add([fname])
-        self.repo.index.commit(commit_msg)
+        self._commit(fname, commit_msg, username)
 
     def get_revision(self, fname, rev=None):
         full_path = os.path.join(self.location, fname)
         text = u''
         if rev:
-            pass  # XXX check out revision
+            pass  # XXX check out revision. Set a lock?
         if os.path.exists(full_path):
             with open(full_path) as f:
                 text = f.read()

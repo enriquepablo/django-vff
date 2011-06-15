@@ -56,7 +56,7 @@ def get_repo_location():
                                 filepath_to_uri(reponame))
     return os.path.abspath(location), base_url
 
-def get_cimsg_field():
+def get_vff_fields():
     """
     get the field name for the commit message
     """
@@ -64,7 +64,11 @@ def get_cimsg_field():
         msgfield = settings.VFF_COMMIT_MSG_FIELD
     except AttributeError:
         msgfield = 'vff_commit_msg'
-    return msgfield
+    try:
+        userfield = settings.VFF_USERNAME_FIELD
+    except AttributeError:
+        userfield = 'vff_username'
+    return msgfield, userfield
 
 def create_fname(instance, fieldname):
     """
@@ -107,10 +111,11 @@ class VersionedStorage(FileSystemStorage):
             content.name = name
             full_path = self.path(name)
             # new revision
-            msgfield = get_cimsg_field()
+            msgfield, userfield = get_vff_fields()
             commit_msg = getattr(instance, msgfield, 'no commit msg')
+            username = getattr(instance, userfield, 'anonymous')
             fname = create_fname(instance, fieldname)
-            self.backend.add_revision(content, fname, commit_msg)
+            self.backend.add_revision(content, fname, commit_msg, username)
 
             if save or kwargs['created']:
                 setattr(instance, fieldname, name)

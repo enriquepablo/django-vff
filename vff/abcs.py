@@ -44,7 +44,7 @@ class VFFBackend(object):
         """
 
     @abstractmethod
-    def add_revision(self, content, fname, commit_msg):
+    def add_revision(self, content, fname, commit_msg, username):
         """
         Add a new revision to an existing document, or add a new document
         to the repository.
@@ -55,6 +55,7 @@ class VFFBackend(object):
         - fname: A string with the path to the versioned file, relative to the root of the
                 repository
         - commit_msg: A string with the commit msg
+        - username: A username to commit with
         """
 
     @abstractmethod
