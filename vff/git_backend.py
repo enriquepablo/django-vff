@@ -29,16 +29,39 @@
 import os
 import re
 import git
+from git.config import GitConfigParser
+from types import MethodType
+from tempfile import NamedTemporaryFile
 
 from django.conf import settings
 from django.core.files.move import file_move_safe
 
-from lockfile import LockFile
-
 from vff.abcs import VFFBackend
 
-LOCK = LockFile('/tmp/vff-git-commit.lock')
-USERPAT = re.compile(r'(\w+) <(\w+)>')
+USERPAT = re.compile(ur'^([^<]+) <(.+)>$')
+EMAILPAT = re.compile(ur'^([^@]+)@.+$')
+
+GITCONFIG = u'''\
+[user]
+ name = %s
+ email = %s
+'''
+
+def clean_environment():
+    for env in ('USER', 'USERNAME',
+            'GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL',
+            'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL',
+            'GIT_AUTHOR_DATE', 'GIT_COMMITER_DATE'):
+        if env in os.environ:
+            del os.environ[env]
+
+
+class Repo(git.Repo):
+    """
+    This class is only to get rid of the __slots__
+    nuisance in the original class, whereupon you cannot
+    override instance methods.
+    """
 
 
 class GitBackend(object):
@@ -50,22 +73,28 @@ class GitBackend(object):
     def __init__(self, location):
         self.location = location
         try:
-            self.repo = git.Repo(self.location)
+            self.repo = Repo(self.location)
         except git.exc.NoSuchPathError:
-            self.repo = git.Repo.init(self.location)
+            self.repo = Repo.init(self.location)
 
     def _commit(self, fname, msg, username):
-        with LOCK:
-            m = USERPAT.match(username)
-            if m:
-                for env in ('USER', 'GIT_AUTHOR_NAME', 'GIT_COMMITTER_NAME'):
-                    os.environ[env] = m.group(1)
-                for env in ('GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_EMAIL'):
-                    os.environ[env] = m.group(2)
-            else:
-                for env in ('USER', 'GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL',
-                             'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL'):
-                    os.environ[env] = username
+        mu = USERPAT.match(username)
+        me = EMAILPAT.match(username)
+        if mu:
+            config = GITCONFIG % (mu.group(1), mu.group(2))
+        elif me:
+            config = GITCONFIG % (me.group(1), me.group(0))
+        else:
+            config = GITCONFIG % (username, username)
+        with NamedTemporaryFile(delete=True) as f:
+            f.write(config.encode('utf8'))
+            f.seek(0)
+            def fun(self, config_level=None):
+                return f
+            meth = MethodType(fun, self.repo, Repo)
+            setattr(self.repo, '_get_config_path', meth)
+            setattr(self.repo, 'config_level', ['repository'])
+            clean_environment()
             self.repo.index.add([fname])
             self.repo.index.commit(msg)
 
