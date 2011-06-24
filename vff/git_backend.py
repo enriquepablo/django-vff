@@ -29,7 +29,6 @@
 import os
 import re
 import git
-from git.config import GitConfigParser
 from types import MethodType
 from tempfile import NamedTemporaryFile
 
@@ -54,6 +53,7 @@ def clean_environment():
             'GIT_AUTHOR_DATE', 'GIT_COMMITER_DATE'):
         if env in os.environ:
             del os.environ[env]
+    os.environ['USERNAME'] = 'dummy@dummy'
 
 
 class Repo(git.Repo):
