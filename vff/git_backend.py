@@ -28,12 +28,15 @@
 
 import os
 import re
+import urlparse
+import datetime
 import git
 from types import MethodType
 from tempfile import NamedTemporaryFile
 
 from django.conf import settings
 from django.core.files.move import file_move_safe
+from django.utils.encoding import filepath_to_uri
 
 from vff.abcs import VFFBackend
 
@@ -55,6 +58,33 @@ def clean_environment():
             del os.environ[env]
     os.environ['USERNAME'] = 'dummy@dummy'
 
+def get_repo_name():
+    """
+    get the name of the versioned files repository
+    """
+    try:
+        reponame = settings.VFF_REPO_NAME
+    except AttributeError:
+        reponame = 'vf_repo'
+    return reponame
+
+def get_repo_location():
+    """
+    get the absolute path and the base_url for the
+    versioned files repository
+    """
+    reponame = get_repo_name()
+    location = os.path.join(settings.MEDIA_ROOT, reponame)
+    return os.path.abspath(location)
+
+def create_fname(instance, fieldname):
+    """
+    return the path to the file relative to the
+    repository of versioned files
+    """
+    class_name = instance.__class__.__name__.lower()
+    return '%s%s-%s.xml' % (class_name, instance.pk, fieldname)
+
 
 class Repo(git.Repo):
     """
@@ -70,12 +100,17 @@ class GitBackend(object):
     See abcs.py for documentation.
     """
 
-    def __init__(self, location):
-        self.location = location
+    def __init__(self, fieldname):
+        self.location = get_repo_location()
+        self.fieldname = fieldname
         try:
             self.repo = Repo(self.location)
         except git.exc.NoSuchPathError:
             self.repo = Repo.init(self.location)
+
+    def get_media_path(self, instance):
+        return os.path.join(get_repo_name(),
+                create_fname(instance, self.fieldname))
 
     def _commit(self, fname, msg, username):
         mu = USERPAT.match(username)
@@ -98,7 +133,8 @@ class GitBackend(object):
             self.repo.index.add([fname])
             self.repo.index.commit(msg)
 
-    def add_revision(self, content, fname, commit_msg, username):
+    def add_revision(self, content, instance, commit_msg, username):
+        fname = create_fname(instance, self.fieldname)
         full_path = os.path.join(self.location, fname)
         if hasattr(content, 'temporary_file_path'):
             # This file has a file path that we can move.
@@ -113,7 +149,29 @@ class GitBackend(object):
             os.chmod(full_path, settings.FILE_UPLOAD_PERMISSIONS)
         self._commit(fname, commit_msg, username)
 
-    def get_revision(self, fname, rev=None):
+    def del_document(self, instance, commit_msg):
+        fname = create_fname(instance, self.fieldname)
+        self.repo.remove([fname])
+        self.repo.index.commit(commit_msg)
+
+    def list_revisions(self, instance, count=0, offset=0):
+        fname = create_fname(instance, self.fieldname)
+        revs = []
+        kwargs = {}
+        if count:
+            kwargs['count'] = count
+        if offset:
+            kwargs['offset'] = offset
+        for ci in self.repo.iter_commits(paths=fname, **kwargs):
+            rev = {'versionid': ci.hexsha,
+                   'author': ci.author.name,
+                   'message': ci.message,
+                   'date': datetime.datetime.fromtimestamp(ci.committed_date),}
+            revs.append(rev)
+        return revs
+
+    def get_revision(self, instance, rev=None):
+        fname = create_fname(instance, self.fieldname)
         full_path = os.path.join(self.location, fname)
         text = u''
         if rev:
@@ -123,18 +181,6 @@ class GitBackend(object):
                 text = f.read()
         # XXX undo check out
         return text
-
-    def del_document(self, fname, commit_msg):
-        self.repo.remove([fname])
-        self.repo.index.commit(commit_msg)
-
-    def list_revisions(self, fname, count=0, offset=0):
-        revs = []
-        for ci in self.repo.iter_commits(paths=fname,
-                                         max_count=count,
-                                         skip=offset):
-            revs.append((ci.hexsha, ci.committed_date, ci.message))
-        return revs
     
     def get_diff(self, fname, id1, id2):
         ci1 = self.repo.commit(id1)

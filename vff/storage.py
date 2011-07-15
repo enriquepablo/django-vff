@@ -27,49 +27,11 @@
 # either expressed or implied, of Terena.
 
 import os
-import urlparse
 
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.core.files.storage import FileSystemStorage
-from django.utils.encoding import filepath_to_uri
 from django.utils.encoding import force_unicode
-
-def get_repo_name():
-    """
-    get the name of the versioned files repository
-    """
-    try:
-        reponame = settings.VFF_REPO_NAME
-    except AttributeError:
-        reponame = 'vf_repo'
-    return reponame
-
-def get_repo_location():
-    """
-    get the absolute path and the base_url for the
-    versioned files repository
-    """
-    reponame = get_repo_name()
-    location = os.path.join(settings.MEDIA_ROOT, reponame)
-    base_url = urlparse.urljoin(settings.MEDIA_URL,
-                                filepath_to_uri(reponame))
-    return os.path.abspath(location), base_url
-
-def create_fname(instance, fieldname):
-    """
-    return the path to the file relative to the
-    repository of versioned files
-    """
-    class_name = instance.__class__.__name__.lower()
-    return '%s%s-%s.xml' % (class_name, instance.pk, fieldname)
-
-def create_mname(instance, fieldname):
-    """
-    return the path to the file relative to the
-    django media directory
-    """
-    return os.path.join(get_repo_name(), create_fname(instance, fieldname))
 
 
 class VersionedStorage(FileSystemStorage):
@@ -77,31 +39,29 @@ class VersionedStorage(FileSystemStorage):
     Versioned filesystem storage
     """
 
-    def __init__(self, backend_class):
-        self.repo_location, self.base_url = get_repo_location()
-        self.backend = backend_class(self.repo_location)
+    def __init__(self, backend_class, fieldname):
+        self.backend = backend_class(fieldname)
         self.location = os.path.abspath(settings.MEDIA_ROOT)
+        self.fieldname = fieldname
 
-    def save(self, uid, content, fieldname, username, commit_msg, save):
+    def save(self, uid, content, username, commit_msg, save):
         def savefile(sender, instance=None, **kwargs):
             # check that the instance is the right one
             try:
-                saved_uid = getattr(instance, fieldname).name
+                saved_uid = getattr(instance, self.fieldname).name
             except AttributeError:
                 # an instance of another class
                 return
             if saved_uid != uid:
                 return
             # create the actual filename from the versioned file
-            name = create_mname(instance, fieldname)
+            name = self.backend.get_media_path(instance)
             content.name = name
-            full_path = self.path(name)
             # new revision
-            fname = create_fname(instance, fieldname)
-            self.backend.add_revision(content, fname, commit_msg, username)
+            self.backend.add_revision(content, instance, commit_msg, username)
 
             if save or kwargs['created']:
-                setattr(instance, fieldname, name)
+                setattr(instance, self.fieldname, name)
                 instance.save()
 
             # remove signal
@@ -109,9 +69,3 @@ class VersionedStorage(FileSystemStorage):
 
         post_save.connect(savefile, weak=False, dispatch_uid=uid)
         return force_unicode(uid.replace('\\', '/'))
-
-    def get_revision(self, fname, rev=None):
-        return self.backend.get_revision(fname, rev=rev)
-
-    def delete(self, fname):
-        self.backend.del_document(fname, "my commit message")

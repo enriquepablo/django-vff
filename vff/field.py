@@ -31,7 +31,7 @@ from django.conf import settings
 from django.utils.importlib import import_module
 from django.db.models.fields.files import FieldFile, FileField
 
-from vff.storage import VersionedStorage, create_mname
+from vff.storage import VersionedStorage
 from vff.abcs import VFFBackend
 
 HAS_SOUTH = True
@@ -48,10 +48,9 @@ class VersionedFieldFile(FieldFile):
         if self.instance.pk is None:    # new file
             self.name = uuid.uuid4().hex
         else:
-            self.name = create_mname(self.instance, self.field.name)
+            self.name = self.storage.backend.get_media_path(self.instance)
             save = False
-        self.storage.save(self.name, content, self.field.name,
-                          username, commit_msg, save)
+        self.storage.save(self.name, content, username, commit_msg, save)
         setattr(self.instance, self.field.name, self.name)
 
         # Update the filesize cache
@@ -59,13 +58,19 @@ class VersionedFieldFile(FieldFile):
         self._committed = True
     save.alters_data = True
 
+    def list_revisions(self, count=0, offset=0):
+        return self.storage.backend.list_revisions(self.instance,
+                                           count=count, offset=offset)
+
+    def get_revision(self, rev=None):
+        return self.storage.backend.get_revision(self.instance, rev=rev)
+
 
 class VersionedFileField(FileField):
 
     attr_class = VersionedFieldFile
 
-    def __init__(self, verbose_name=None, name=None,
-                 storage=None, **kwargs):
+    def __init__(self, name, verbose_name=None, storage=None, **kwargs):
         try:
             path = settings.VERSIONEDFILE_BACKEND
         except AttributeError:
@@ -80,7 +85,7 @@ class VersionedFileField(FileField):
             raise ValueError('The class pointed at in VERSIONEDFILE_BACKEND'
                              ' has to provide the interface defined by'
                              ' vff.abcs.VFFBackend.')
-        vstorage = VersionedStorage(backend_class)
+        vstorage = VersionedStorage(backend_class, name)
         super(VersionedFileField, self).__init__(verbose_name=verbose_name,
                                                  name=name,
                                                  upload_to='unused',

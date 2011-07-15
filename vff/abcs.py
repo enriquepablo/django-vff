@@ -34,17 +34,27 @@ class VFFBackend(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def __init__(self, location):
+    def __init__(self, fieldname):
         """
         Initialize the backend.
 
         params:
-        - location: a string with the absolute path to where the repository
-                   of versioned files has to be located.
+        - fieldname: a string with the name of the field that corresponds to
+                    this storage backend
         """
 
     @abstractmethod
-    def add_revision(self, content, fname, commit_msg, username):
+    def get_media_path(self, instance):
+        """
+        Get the path to the corresponding file relative
+        to the django media directory
+
+        params:
+        - instance: The django model object corresponding to this content
+        """
+
+    @abstractmethod
+    def add_revision(self, content, instance, commit_msg, username):
         """
         Add a new revision to an existing document, or add a new document
         to the repository.
@@ -52,44 +62,55 @@ class VFFBackend(object):
         params:
         - content: A file like object that implements open, seek, read, close
                   and contains the document data to be versioned
-        - fname: A string with the path to the versioned file, relative to the root of the
-                repository
+        - instance: The django model object corresponding to this content
         - commit_msg: A string with the commit msg
         - username: A username to commit with
         """
 
     @abstractmethod
-    def del_document(self, fname, commit_msg):
+    def del_document(self, instance, commit_msg):
         """
         Remove document from the repository.
 
         params:
-        - fname: A string with the path to the versioned file, relative to the root of the
-                repository
+        - instance: The django model object corresponding to this content
         - commit_msg: A string with the commit msg
         """
 
     @abstractmethod
-    def list_revisions(self, fname, count=0, offset=0):
+    def list_revisions(self, instance, count=0, offset=0):
         """
         return a list of all (or from offset to offset+count) revisions of a document. A revision is here
-        represented by a (id, commit_date, commit_msg) tuple.
+        represented by a dictionary with keys:
+            * versionid: A string that uniquelly identifies a version for the document, and can be used
+                         as parameter for self.get_revision (below)
+            * author: A userid
+            * message: A string with the commit message
+            * date: a datetime object with the date the revision was commited.
 
         params:
-        - fname: A string with the path to the versioned file, relative to the root of the
-                repository
-        - count: The number of revisions to list
+        - instance: The django model object corresponding to this content
+        - count: The number of revisions to list. -1 for all.
         - offset: The number of revisions skipped from the list
         """
 
     @abstractmethod
-    def get_diff(self, fname, id1, id2):
+    def get_revision(self, instance, rev=None):
         """
-        return a diff between two revisions.
+        return the revision specified by id. If id is None, the last revision.
+        A revision should be a string encoded as utf8.
 
         params:
-        - fname: A string with the path to the versioned file, relative to the root of the
-                repository
-        - id1, id2: the ids of the revisions to diff.
+        - instance: The django model object corresponding to this content
+        - rev: the id of the revision to get. If None, get the last.
         """
 
+    @abstractmethod
+    def get_diff(self, instance, id1, id2):
+        """
+        return a diff between two revisions, as an utf8 string.
+
+        params:
+        - instance: The django model object corresponding to this content
+        - id1, id2: the ids of the revisions to diff.
+        """
