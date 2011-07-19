@@ -28,7 +28,6 @@
 
 import os
 import re
-import urlparse
 import datetime
 import git
 from types import MethodType
@@ -36,7 +35,6 @@ from tempfile import NamedTemporaryFile
 
 from django.conf import settings
 from django.core.files.move import file_move_safe
-from django.utils.encoding import filepath_to_uri
 
 from vff.abcs import VFFBackend
 
@@ -175,11 +173,11 @@ class GitBackend(object):
         full_path = os.path.join(self.location, fname)
         text = u''
         if rev:
-            pass  # XXX check out revision. Set a lock?
-        if os.path.exists(full_path):
+            blob = self.repo.commit(rev).tree[fname]
+            text = blob.data_stream[3].read()
+        elif os.path.exists(full_path):
             with open(full_path) as f:
                 text = f.read()
-        # XXX undo check out
         return text
     
     def get_diff(self, fname, id1, id2):
