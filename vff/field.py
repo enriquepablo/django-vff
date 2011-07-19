@@ -65,6 +65,9 @@ class VersionedFieldFile(FieldFile):
     def get_revision(self, rev=None):
         return self.storage.backend.get_revision(self.instance, rev=rev)
 
+    def get_diff(self, r1, r2):
+        return self.storage.backend.get_diff(self.instance, r1, r2)
+
 
 class VersionedFileField(FileField):
 

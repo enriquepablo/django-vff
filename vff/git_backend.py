@@ -29,6 +29,7 @@
 import os
 import re
 import datetime
+import difflib
 import git
 from types import MethodType
 from tempfile import NamedTemporaryFile
@@ -180,10 +181,13 @@ class GitBackend(object):
                 text = f.read()
         return text
     
-    def get_diff(self, fname, id1, id2):
-        ci1 = self.repo.commit(id1)
-        ci2 = self.repo.commit(id2)
-        diff = ci1.diff(other=ci2, paths=fname, create_patch=True)[0]
-        return diff.diff
+    def get_diff(self, instance, r1, r2):
+        md1 = self.get_revision(instance, r1).split('\n')
+        md2 = self.get_revision(instance, r2).split('\n')
+        diff = '\n'.join(difflib.unified_diff(md1, md2,
+                                              fromfile=r1,
+                                              tofile=r2,
+                                              ))
+        return diff
 
 VFFBackend.register(GitBackend)
