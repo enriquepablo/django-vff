@@ -179,12 +179,12 @@ class GitBackend(object):
         elif os.path.exists(full_path):
             with open(full_path) as f:
                 text = f.read()
-        return text
+        return text.decode('utf8')
     
     def get_diff(self, instance, r1, r2):
-        md1 = self.get_revision(instance, r1).split('\n')
-        md2 = self.get_revision(instance, r2).split('\n')
-        diff = '\n'.join(difflib.unified_diff(md1, md2,
+        md1 = self.get_revision(instance, r1).split(u'\n')
+        md2 = self.get_revision(instance, r2).split(u'\n')
+        diff = u'\n'.join(difflib.unified_diff(md1, md2,
                                               fromfile=r1,
                                               tofile=r2,
                                               ))
