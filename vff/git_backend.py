@@ -106,6 +106,12 @@ class GitBackend(object):
             self.repo = Repo(self.location)
         except git.exc.NoSuchPathError:
             self.repo = Repo.init(self.location)
+            readme = os.path.join(self.location, 'README')
+            f = open(readme, 'w')
+            f.write('VFF GIT REPOSITORY')
+            f.close()
+            self.repo.index.add([readme])
+            self.repo.index.commit('Initial commit')
 
     def get_media_path(self, instance):
         return os.path.join(get_repo_name(),
