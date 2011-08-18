@@ -73,7 +73,7 @@ class VersionedFileField(FileField):
 
     attr_class = VersionedFieldFile
 
-    def __init__(self, name, verbose_name=None, storage=None, **kwargs):
+    def __init__(self, name=None, verbose_name=None, storage=None, **kwargs):
         try:
             path = settings.VERSIONEDFILE_BACKEND
         except AttributeError:
