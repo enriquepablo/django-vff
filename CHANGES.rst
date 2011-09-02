@@ -1,6 +1,6 @@
 CHANGES
 =======
 
-0.1.0 (2011-06-15)
+0.1 (2011-09-02)
 ------------------
  - Initial version which includes a VersionedFileField and a git backend.
