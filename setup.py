@@ -33,27 +33,28 @@ from setuptools import setup, find_packages
 def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
-version = '0.1a1'
+version = '0.1b1'
 
 setup(name='django-vff',
       version=version,
-      description=("Django versioned file field"),
+      description=("Versioned file field for django models"),
       long_description=(read('README.rst') + '\n\n' + read('CHANGES.rst')),
       classifiers=[
+        'Development Status :: 4 - Beta',
         'Framework :: Django',
+        'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',],
-      keywords='django versioned file field',
+      keywords='django versioned file field vcs model git',
       author='TERENA',
       author_email='eperez@yaco.es',
       url='https://github.com/Yaco-Sistemas/django-vff',
       license='BSD',
-      packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
+      packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          'lockfile',
           'GitPython',
       ],
 )
