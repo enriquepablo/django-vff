@@ -58,6 +58,14 @@ class VersionedFieldFile(FieldFile):
         self._committed = True
     save.alters_data = True
 
+    def delete(self, name, username, commit_msg, save=False):
+        if hasattr(self, '_file'):
+            self.close()
+            del self.file
+        self.storage.delete(self.name, username, commit_msg, save)
+
+    delete.alters_data = True
+
     def list_revisions(self, count=0, offset=0):
         return self.storage.backend.list_revisions(self.instance,
                                            count=count, offset=offset)

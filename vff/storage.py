@@ -29,7 +29,7 @@
 import os
 
 from django.conf import settings
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.core.files.storage import FileSystemStorage
 from django.utils.encoding import force_unicode
 
@@ -68,4 +68,34 @@ class VersionedStorage(FileSystemStorage):
             post_save.disconnect(dispatch_uid=uid)
 
         post_save.connect(savefile, weak=False, dispatch_uid=uid)
+        return force_unicode(uid.replace('\\', '/'))
+
+    def delete(self, uid, username, commit_msg, save):
+        def deletefile(sender, instance=None, **kwargs):
+            # check that the instance is the right one
+            import pdb;pdb.set_trace()
+            fieldfile = getattr(instance, self.fieldname)
+            try:
+                saved_uid = fieldfile.name
+            except AttributeError:
+                # an instance of another class
+                return
+            if saved_uid != uid:
+                return
+            fieldfile.name = None
+            setattr(instance, fieldfile.field.name, fieldfile.name)
+            self.backend.del_document(instance, commit_msg, username)
+
+            # Delete the filesize cache
+            if hasattr(fieldfile, '_size'):
+                del fieldfile._size
+            fieldfile._committed = False
+
+            if save:
+                instance.save()
+
+            # remove signal
+            post_delete.disconnect(dispatch_uid=uid)
+
+        post_delete.connect(deletefile, weak=False, dispatch_uid=uid)
         return force_unicode(uid.replace('\\', '/'))

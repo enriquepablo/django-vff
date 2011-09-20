@@ -117,7 +117,7 @@ class GitBackend(object):
         return os.path.join(get_repo_name(),
                 create_fname(instance, self.fieldname))
 
-    def _commit(self, fname, msg, username):
+    def _commit(self, fname, msg, username, action):
         mu = USERPAT.match(username)
         me = EMAILPAT.match(username)
         if mu:
@@ -135,7 +135,10 @@ class GitBackend(object):
             setattr(self.repo, '_get_config_path', meth)
             setattr(self.repo, 'config_level', ['repository'])
             clean_environment()
-            self.repo.index.add([fname])
+            if action == 'add':
+                self.repo.index.add([fname])
+            elif action == 'delete':
+                self.repo.remove([fname])
             self.repo.index.commit(msg)
 
     def add_revision(self, content, instance, commit_msg, username):
@@ -152,12 +155,11 @@ class GitBackend(object):
                 f.write(content.read())
         if settings.FILE_UPLOAD_PERMISSIONS is not None:
             os.chmod(full_path, settings.FILE_UPLOAD_PERMISSIONS)
-        self._commit(fname, commit_msg, username)
+        self._commit(fname, commit_msg, username, 'add')
 
-    def del_document(self, instance, commit_msg):
+    def del_document(self, instance, commit_msg, username):
         fname = create_fname(instance, self.fieldname)
-        self.repo.remove([fname])
-        self.repo.index.commit(commit_msg)
+        self._commit(fname, commit_msg, username, 'delete')
 
     def list_revisions(self, instance, count=0, offset=0):
         fname = create_fname(instance, self.fieldname)
