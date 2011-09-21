@@ -43,8 +43,9 @@ except ImportError:
 
 class VersionedFieldFile(FieldFile):
 
-    def save(self, name, content, username, commit_msg, save=True):
-        #name = self.field.generate_filename(self.instance, name)
+    def save(self, name, content, username='', commit_msg='', save=True):
+        if not username:
+            return
         if self.instance.pk is None:    # new file
             self.name = uuid.uuid4().hex
         else:
@@ -58,7 +59,9 @@ class VersionedFieldFile(FieldFile):
         self._committed = True
     save.alters_data = True
 
-    def delete(self, name, username, commit_msg, save=False):
+    def delete(self, username='', commit_msg='', save=False):
+        if not username:
+            return
         if hasattr(self, '_file'):
             self.close()
             del self.file
