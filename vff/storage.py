@@ -73,7 +73,6 @@ class VersionedStorage(FileSystemStorage):
     def delete(self, uid, username, commit_msg, save):
         def deletefile(sender, instance=None, **kwargs):
             # check that the instance is the right one
-            import pdb;pdb.set_trace()
             fieldfile = getattr(instance, self.fieldname)
             try:
                 saved_uid = fieldfile.name
