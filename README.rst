@@ -75,7 +75,28 @@ Once you have an instance of the ``MyModel`` class, you can use three special me
     -These are the contents of the first version of the file
     +These are the contents of the second version of the file
 
+Saving and deleting
++++++++++++++++++++
+
+At the moment, saving and deleting has to be explicitly done for this field. So, for example, if you have a model instance with a ``content`` vff field, and a view that uses an edit form with a ``forms.FileField`` for it, after validating the form you would have to do something like::
+
+    name = instance.content.name
+    content = form['content'].data
+    username = request.user.username
+    commit_msg = form['commit_msg'].data.encode('utf8')
+    instance.content.save(name, content, username, commit_msg)
+    instance.save()
+
+Likewise, when removing an instance, you would::
+
+    username = request.user.username
+    commit_msg = u'entity removed'
+    instance.content.delete(username, commit_msg)
+    instance.delete()
+
+In the future, if there is interest, the package could include a special widget with input space for the necessary data (commit message, etc) so that saving and deleting would be transparent.
+
 Providing new backends
 ----------------------
 
-To develop a new backend for django-vff, you have to subclass the abstract base class ``vff.abcs.VFFBackend``. The methods that need to be implemented are well documented in the docstrings of the class.
+To develop a new backend for django-vff, you have to subclass the abstract base class ``vff.abcs.VFFBackend``. The methods that need to be implemented are documented in the docstrings of the class.
