@@ -1,6 +1,10 @@
 CHANGES
 =======
 
+0.1b4 (2011-10-01)
+------------------
+ - Better fix for error when deleting objects with no file in the repo.
+
 0.1b3 (2011-10-01)
 ------------------
  - Do not fail deleting objects with no file in the repo.

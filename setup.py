@@ -33,7 +33,7 @@ from setuptools import setup, find_packages
 def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
-version = '0.1b3'
+version = '0.1b4'
 
 setup(name='django-vff',
       version=version,
