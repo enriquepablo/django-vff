@@ -49,7 +49,7 @@ class VersionedFieldFile(FieldFile):
         if self.instance.pk is None:    # new file
             self.name = uuid.uuid4().hex
         else:
-            self.name = self.storage.backend.get_media_path(self.instance)
+            self.name = self.storage.backend.get_filename(self.instance)
             save = False
         self.storage.save(self.name, content, username, commit_msg, save)
         setattr(self.instance, self.field.name, self.name)

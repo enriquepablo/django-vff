@@ -55,7 +55,7 @@ class VersionedStorage(FileSystemStorage):
             if saved_uid != uid:
                 return
             # create the actual filename from the versioned file
-            name = self.backend.get_media_path(instance)
+            name = self.backend.get_filename(instance)
             content.name = name
             # new revision
             self.backend.add_revision(content, instance, commit_msg, username)

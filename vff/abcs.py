@@ -44,10 +44,10 @@ class VFFBackend(object):
         """
 
     @abstractmethod
-    def get_media_path(self, instance):
+    def get_filename(self, instance):
         """
-        Get the path to the corresponding file relative
-        to the django media directory
+        Get the name of the xml file that corresponds to the provided instance
+        and to the field identified by self.fieldname.
 
         params:
         - instance: The django model object corresponding to this content

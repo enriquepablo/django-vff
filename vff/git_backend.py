@@ -57,33 +57,6 @@ def clean_environment():
             del os.environ[env]
     os.environ['USERNAME'] = 'dummy@dummy'
 
-def get_repo_name():
-    """
-    get the name of the versioned files repository
-    """
-    try:
-        reponame = settings.VFF_REPO_NAME
-    except AttributeError:
-        reponame = 'vf_repo'
-    return reponame
-
-def get_repo_location():
-    """
-    get the absolute path and the base_url for the
-    versioned files repository
-    """
-    reponame = get_repo_name()
-    location = os.path.join(settings.MEDIA_ROOT, reponame)
-    return os.path.abspath(location)
-
-def create_fname(instance, fieldname):
-    """
-    return the path to the file relative to the
-    repository of versioned files
-    """
-    class_name = instance.__class__.__name__.lower()
-    return '%s%s-%s.xml' % (class_name, instance.pk, fieldname)
-
 
 class Repo(git.Repo):
     """
@@ -100,7 +73,11 @@ class GitBackend(object):
     """
 
     def __init__(self, fieldname):
-        self.location = get_repo_location()
+        try:
+            location = settings.VFF_REPO_ROOT
+        except AttributeError:
+            location = os.path.join(settings.MEDIA_ROOT, 'vf_repo')
+        self.location = os.path.abspath(location)
         self.fieldname = fieldname
         try:
             self.repo = Repo(self.location)
@@ -113,9 +90,9 @@ class GitBackend(object):
             self.repo.index.add([readme])
             self.repo.index.commit('Initial commit')
 
-    def get_media_path(self, instance):
-        return os.path.join(get_repo_name(),
-                create_fname(instance, self.fieldname))
+    def get_filename(self, instance):
+        class_name = instance.__class__.__name__.lower()
+        return '%s%s-%s.xml' % (class_name, instance.pk, self.fieldname)
 
     def _commit(self, fname, msg, username, action):
         mu = USERPAT.match(username)
@@ -144,7 +121,7 @@ class GitBackend(object):
             self.repo.index.commit(msg)
 
     def add_revision(self, content, instance, commit_msg, username):
-        fname = create_fname(instance, self.fieldname)
+        fname = self.get_filename(instance)
         full_path = os.path.join(self.location, fname)
         if hasattr(content, 'temporary_file_path'):
             # This file has a file path that we can move.
@@ -160,11 +137,11 @@ class GitBackend(object):
         self._commit(fname, commit_msg, username, 'add')
 
     def del_document(self, instance, commit_msg, username):
-        fname = create_fname(instance, self.fieldname)
+        fname = self.get_filename(instance)
         self._commit(fname, commit_msg, username, 'delete')
 
     def list_revisions(self, instance, count=0, offset=0):
-        fname = create_fname(instance, self.fieldname)
+        fname = self.get_filename(instance)
         revs = []
         kwargs = {}
         if count:
@@ -180,7 +157,7 @@ class GitBackend(object):
         return revs
 
     def get_revision(self, instance, rev=None):
-        fname = create_fname(instance, self.fieldname)
+        fname = self.get_filename(instance)
         full_path = os.path.join(self.location, fname)
         text = u''
         if rev:
