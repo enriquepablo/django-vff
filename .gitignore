@@ -10,6 +10,7 @@ lib/
 parts/
 src/
 var/
+dist/
 *.pyc
 *.pyo
 *.swp
