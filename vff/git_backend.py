@@ -138,10 +138,9 @@ class GitBackend(object):
             if action == 'add':
                 self.repo.index.add([fname])
             elif action == 'delete':
-                try:
+                full_path = os.path.join(self.location, fname)
+                if os.path.exists(full_path):
                     self.repo.index.remove([fname], working_tree=True)
-                except git.GitCommandError:
-                    pass
             self.repo.index.commit(msg)
 
     def add_revision(self, content, instance, commit_msg, username):
