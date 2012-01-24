@@ -5,7 +5,7 @@ django-vff
 Introduction
 ------------
 
-This package offers a file field for django models, that stores the file contents under a VCS (version control system). Everytime a field of this type is changed for a particular model instance, the new content will be commited as a new version in the repository. Thus, there will be one file in the repository for each vff field and instance. The repository will be a subdirectory of django's ``settings.MEDIA_ROOT``.
+This package offers a file field for django models, that stores the file contents under a VCS (version control system). Everytime a field of this type is changed for a particular model instance, the new content will be commited as a new version in the repository. Thus, there will be one file in the repository for each vff field and instance. The repository will be at ``settings.VFF_REPO_ROOT``, or, if that is unset, at a ``vf_repo`` subdirectory of django's ``settings.MEDIA_ROOT``.
 
 Different VCSs can be used to manage the repository, using pluggable backends. The package only provides a `GIT <http://git-scm.com>`_ backend out of the box.
 
@@ -23,8 +23,17 @@ Configuration
 
 You have to set the following variables in django's ``settings.py``:
 
-``VERSIONEDFILE_BACKEND``
-    A dotted name leading to a backend class, e.g. ``"vff.git_backend.GitBackend"``.
+``VFF_BACKEND``
+    A dotted name leading to a backend class, e.g. ``"vff.git_backend.GitBackend"``. This setting is required.
+
+For the git backend:
+
+``VFF_REPO_ROOT``
+    Absolute path to the location of the git repository. This repository may or may not exist before setting up django-vff.
+``VFF_REPO_PATH``
+    Relative path within the git repository to the directory where django-vff keeps its managed files.
+
+If these two settings for the git backend are not set, ``VFF_REPO_ROOT`` will assume a value of ``os.path.join(settings.MEDIA_ROOT, 'vf_repo')``, and ``VFF_REPO_PATH`` will assume a value of ``''``.
 
 Usage
 -----

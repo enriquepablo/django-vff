@@ -73,26 +73,31 @@ class GitBackend(object):
     """
 
     def __init__(self, fieldname):
-        try:
-            location = settings.VFF_REPO_ROOT
-        except AttributeError:
-            location = os.path.join(settings.MEDIA_ROOT, 'vf_repo')
+        location = getattr(settings, 'VFF_REPO_ROOT',
+                    os.path.join(settings.MEDIA_ROOT, 'vf_repo'))
         self.location = os.path.abspath(location)
+        self.sublocation = getattr(settings, 'VFF_REPO_PATH', '')
         self.fieldname = fieldname
         try:
             self.repo = Repo(self.location)
         except git.exc.NoSuchPathError:
             self.repo = Repo.init(self.location)
-            readme = os.path.join(self.location, 'README')
+        abs_sublocation = os.path.join(self.location, self.sublocation)
+        if not os.path.isdir(abs_sublocation):
+            os.makedirs(abs_sublocation)
+            readme = os.path.join(abs_sublocation, 'README')
             f = open(readme, 'w')
             f.write('VFF GIT REPOSITORY')
             f.close()
             self.repo.index.add([readme])
-            self.repo.index.commit('Initial commit')
+            self.repo.index.commit('Initial vff commit')
 
     def get_filename(self, instance):
         class_name = instance.__class__.__name__.lower()
-        return '%s%s-%s.xml' % (class_name, instance.pk, self.fieldname)
+        name = '%s%s-%s.xml' % (class_name, instance.pk, self.fieldname)
+        if self.sublocation:
+            return os.path.join(self.sublocation, name)
+        return name
 
     def _commit(self, fname, msg, username, action):
         mu = USERPAT.match(username)

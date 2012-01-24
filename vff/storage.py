@@ -41,7 +41,9 @@ class VersionedStorage(FileSystemStorage):
 
     def __init__(self, backend_class, fieldname):
         self.backend = backend_class(fieldname)
-        self.location = os.path.abspath(settings.MEDIA_ROOT)
+        location = getattr(settings, 'VFF_REPO_ROOT',
+                    os.path.join(settings.MEDIA_ROOT, 'vf_repo'))
+        self.location = os.path.abspath(location)
         self.fieldname = fieldname
 
     def save(self, uid, content, username, commit_msg, save):

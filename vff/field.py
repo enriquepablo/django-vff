@@ -43,6 +43,13 @@ except ImportError:
 
 class VersionedFieldFile(FieldFile):
 
+    def __init__(self, instance, field, name):
+        if instance.pk is None:    # new file
+            name = uuid.uuid4().hex
+        else:
+            name = field.storage.backend.get_filename(instance)
+        super(VersionedFieldFile, self).__init__(instance, field, name)
+
     def save(self, name, content, username='', commit_msg='', save=True):
         if not username:
             return
@@ -86,17 +93,17 @@ class VersionedFileField(FileField):
 
     def __init__(self, name=None, verbose_name=None, storage=None, **kwargs):
         try:
-            path = settings.VERSIONEDFILE_BACKEND
+            path = settings.VFF_BACKEND
         except AttributeError:
             raise NameError('When using VersionedField, you have to define'
-                            ' VERSIONEDFILE_BACKEND in settings.py. Refer'
+                            ' VFF_BACKEND in settings.py. Refer'
                             ' to the docs for more info.')
         mname = '.'.join(path.split('.')[:-1])
         cname = path.split('.')[-1]
         module = import_module(mname)
         backend_class = getattr(module, cname)
         if not issubclass(backend_class, VFFBackend):
-            raise ValueError('The class pointed at in VERSIONEDFILE_BACKEND'
+            raise ValueError('The class pointed at in VFF_BACKEND'
                              ' has to provide the interface defined by'
                              ' vff.abcs.VFFBackend.')
         vstorage = VersionedStorage(backend_class, name)
