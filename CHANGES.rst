@@ -1,6 +1,10 @@
 CHANGES
 =======
 
+0.2b1 (2012-01-24)
+------------------
+ - The (git) repo can now be anywhere in the filesystem (not necessarily inside the MEDIA_ROOT), and django-vff can be told to keep its files in a subdirectory iof the repo.
+
 0.1b4 (2011-10-01)
 ------------------
  - Better fix for error when deleting objects with no file in the repo.
