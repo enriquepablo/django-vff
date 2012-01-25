@@ -1,4 +1,3 @@
-
 django-vff
 ==========
 
@@ -44,8 +43,8 @@ You use it like you would use ``django.db.models.FileField``::
   from vff.field import VersionedFileField
 
 
-  class MyModel(models.model):
-      name = models.CharField('Name')
+  class MyModel(models.Model):
+      name = models.CharField('Name', max_length=128)
       content = VersionedFileField(name='content', verbose_name='file content')
 
 
