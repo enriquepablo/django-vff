@@ -80,7 +80,7 @@ class GitBackend(object):
         self.fieldname = fieldname
         try:
             self.repo = Repo(self.location)
-        except git.exc.NoSuchPathError:
+        except (git.exc.NoSuchPathError, git.exc.InvalidGitRepositoryError):
             self.repo = Repo.init(self.location)
         abs_sublocation = os.path.join(self.location, self.sublocation)
         if not os.path.isdir(abs_sublocation):
