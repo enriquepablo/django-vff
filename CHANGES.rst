@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+0.2b2 (2012-01-25)
+------------------
+
+ - Fix typo on README.txt
+ - Fix uncaught exception during initialization of GIT repository.
+
 0.2b1 (2012-01-24)
 ------------------
  - The (git) repo can now be anywhere in the filesystem (not necessarily inside the MEDIA_ROOT), and django-vff can be told to keep its files in a subdirectory iof the repo.
