@@ -44,7 +44,7 @@ You use it like you would use ``django.db.models.FileField``::
 
 
   class MyModel(models.Model):
-      name = models.CharField('Name')
+      name = models.CharField('Name', max_length=128)
       content = VersionedFileField(name='content', verbose_name='file content')
 
 
