@@ -113,6 +113,12 @@ class VersionedFileField(FileField):
                                                  storage=vstorage,
                                                  **kwargs)
 
+    def deconstruct(self):
+        name, path, args, kwargs = super(VersionedFileField, self).deconstruct()
+        del kwargs["upload_to"]
+        return name, path, args, kwargs
+
+
 if HAS_SOUTH:
     add_introspection_rules([
         (
