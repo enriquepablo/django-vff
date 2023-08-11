@@ -55,6 +55,6 @@ setup(name='django-vff',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          'GitPython==0.3.6',
+          'GitPython==3.1.32',
       ],
 )
